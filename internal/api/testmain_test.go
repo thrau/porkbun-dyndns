@@ -1,0 +1,17 @@
+package api
+
+import (
+	"log"
+	"os"
+	"testing"
+
+	"github.com/joho/godotenv"
+)
+
+func TestMain(m *testing.M) {
+	if err := godotenv.Load("../../.env"); err != nil {
+		log.Println("no .env file found")
+	}
+
+	os.Exit(m.Run())
+}

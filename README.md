@@ -7,7 +7,7 @@ Includes both a command-line interface for manual operations and a daemon for au
 ## Installation
 
 * Download the latest release from the [releases page](https://github.com/porkbun/porkbun-dyndns/releases) page.
-* Unpack the archive and place the `porkbun-dyndns` binary into your path.
+* Unpack the archive and place the `porkbun-dyndns` and/or `porkbun-dyndnsd` binary into your path.
 * Make sure API access is enabled for your domain. 
 * Create an API key, you can do this in the [account API settings](https://porkbun.com/account/api).
 
@@ -25,6 +25,11 @@ export PORKBUN_API_KEY=pk1_...
 export PORKBUN_SECRET_KEY=sk1_...
 ```
 
+You may see the following error if you don't have the API keys set correctly:
+```
+Error: porkbun api error (400): status=ERROR code=API_KEY_REQUIRED message=All API requests require an API key or API token.
+```
+
 Show your IP address:
 
 ```sh
@@ -34,19 +39,19 @@ porkbun-dyndns myip
 List all domain records via the API:
 
 ```sh
-porkbun-dyndns dns list --domain example.com
+porkbun-dyndns list-records --domain example.com
 ```
 
 Show a specific A record
 
 ```sh
-porkbun-dyndns dns show --domain example.com --name www --type A
+porkbun-dyndns get-record --domain example.com --name www --type A
 ```
 
 Update a record by name and type (replaces *all* records of that type!)
 
 ```sh
-porkbun-dyndns dns update --domain example.com --name www --type A 192.168.1.1
+porkbun-dyndns update-record --domain example.com --name www --type A 192.168.1.1
 ```
 
 ### Daemon Usage
@@ -56,7 +61,7 @@ The daemon runs in the background and automatically updates DNS records based on
 Run the daemon with a configuration file:
 
 ```sh
-porkbun-dyndns daemon --config /etc/porkbun-dyndns/daemon.conf
+porkbun-dyndnsd --config /etc/porkbun-dyndns/daemon.conf
 ```
 
 #### Systemd Service
