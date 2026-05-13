@@ -3,8 +3,9 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestListRecords(t *testing.T) {
@@ -32,25 +33,12 @@ func TestListRecordsWithoutCredentials(t *testing.T) {
 	}
 
 	var apiErr ErrorResponse
-	if !errors.As(err, &apiErr) {
-		t.Fatalf("Expected ErrorResponse, got %T: %v", err, err)
-	}
-
-	if apiErr.HTTPStatus != 400 {
-		t.Errorf("Expected HTTPStatus 400, got %d", apiErr.HTTPStatus)
-	}
-
-	if apiErr.Status != "ERROR" {
-		t.Errorf("Expected Status 'ERROR', got '%s'", apiErr.Status)
-	}
-
-	if apiErr.Code != "API_KEY_REQUIRED" {
-		t.Errorf("Expected Code 'API_KEY_REQUIRED', got '%s'", apiErr.Code)
-	}
-
-	if apiErr.Message != "All API requests require an API key or API token." {
-		t.Errorf("Expected Message 'All API requests require an API key or API token.', got '%s'", apiErr.Message)
-	}
+	assert := assert.New(t)
+	assert.ErrorAs(err, &apiErr, "Expected ErrorResponse error type")
+	assert.Equal(400, apiErr.HTTPStatus, "Expected HTTPStatus 400")
+	assert.Equal("ERROR", apiErr.Status, "Expected Status 'ERROR'")
+	assert.Equal("API_KEY_REQUIRED", apiErr.Code, "Expected Code 'API_KEY_REQUIRED'")
+	assert.Equal("All API requests require an API key or API token.", apiErr.Message, "Expected Message 'All API requests require an API key or API token.'")
 }
 
 func TestListRecordsInvalidDomain(t *testing.T) {
@@ -66,24 +54,82 @@ func TestListRecordsInvalidDomain(t *testing.T) {
 	}
 
 	var apiErr ErrorResponse
-	if !errors.As(err, &apiErr) {
-		t.Fatalf("Expected ErrorResponse, got %T: %v", err, err)
+	assert := assert.New(t)
+	assert.ErrorAs(err, &apiErr, "Expected ErrorResponse error type")
+	assert.Equal(400, apiErr.HTTPStatus, "Expected HTTPStatus 400")
+	assert.Equal("ERROR", apiErr.Status, "Expected Status 'ERROR'")
+	assert.Equal("INVALID_DOMAIN", apiErr.Code, "Expected Code 'INVALID_DOMAIN'")
+	assert.Equal("Invalid domain.", apiErr.Message, "Expected Message 'Invalid domain.'")
+}
+
+func TestDnsService_GetRecordById(t *testing.T) {
+	client := NewClient(WithEnvironmentCredentials())
+	records, err := client.Dns.GetRecordById(context.TODO(), "rauschig.org", "382004330")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	if apiErr.HTTPStatus != 400 {
-		t.Errorf("Expected HTTPStatus 400, got %d", apiErr.HTTPStatus)
+	assert := assert.New(t)
+	assert.Equal(len(records), 1, "Expected 1 record, got %d", len(records))
+
+	record := records[0]
+	expected := DNSRecord{
+		Id:       "382004330",
+		Name:     "rauschig.org",
+		Type:     "NS",
+		Content:  "fortaleza.porkbun.com",
+		Ttl:      "86400",
+		Priority: "",
+		Notes:    "",
+	}
+	assert.Equal(expected, record)
+}
+
+func TestDnsService_GetRecordByType(t *testing.T) {
+	client := NewClient(WithEnvironmentCredentials())
+	records, err := client.Dns.GetRecordByType(context.TODO(), "rauschig.org", "MX")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	if apiErr.Status != "ERROR" {
-		t.Errorf("Expected Status 'ERROR', got '%s'", apiErr.Status)
+	assert := assert.New(t)
+	assert.Equal(len(records), 1, "Expected 1 record, got %d", len(records))
+
+	record := records[0]
+	expected := DNSRecord{
+		Id:       "382004521",
+		Name:     "rauschig.org",
+		Type:     "MX",
+		Content:  "srv.divzero.at",
+		Ttl:      "600",
+		Priority: "10",
+		Notes:    "",
+	}
+	assert.Equal(expected, record)
+}
+
+func TestDnsService_GetRecordByNameAndType(t *testing.T) {
+	client := NewClient(WithEnvironmentCredentials())
+	records, err := client.Dns.GetRecordByNameAndType(context.TODO(), "rauschig.org", "*", "CNAME")
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	if apiErr.Code != "INVALID_DOMAIN" {
-		t.Errorf("Expected Code 'INVALID_DOMAIN', got '%s'", apiErr.Code)
-	}
+	assert := assert.New(t)
+	assert.Equal(len(records), 1, "Expected 1 record, got %d", len(records))
 
-	if apiErr.Message != "Invalid domain." {
-		t.Errorf("Expected Message 'Invalid domain.', got '%s'", apiErr.Message)
+	record := records[0]
+	expected := DNSRecord{
+		Id:       "382004466",
+		Name:     "*.rauschig.org",
+		Type:     "CNAME",
+		Content:  "rauschig.org",
+		Ttl:      "600",
+		Priority: "0",
+		Notes:    "",
 	}
-
+	assert.Equal(expected, record)
 }

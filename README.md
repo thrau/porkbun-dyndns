@@ -45,13 +45,14 @@ porkbun-dyndns list-records --domain example.com
 Show a specific A record
 
 ```sh
-porkbun-dyndns get-record --domain example.com --name www --type A
+porkbun-dyndns get-record --name example.com --type A
+porkbun-dyndns get-record --name www.example.com --type A
 ```
 
 Update a record by name and type (replaces *all* records of that type!)
 
 ```sh
-porkbun-dyndns update-record --domain example.com --name www --type A 192.168.1.1
+porkbun-dyndns update-record --name www.example.com --type A 192.168.1.1
 ```
 
 ### Daemon Usage
