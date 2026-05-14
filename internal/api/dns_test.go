@@ -218,6 +218,76 @@ func TestDnsService_CRUDRoundtrip(t *testing.T) {
 	}
 }
 
+func TestDnsService_UpdateRecordById(t *testing.T) {
+	// documents the somewhat peculiar behavior of `/edit/{domain}/{id}`.
+	client := NewClient(WithEnvironmentCredentials())
+
+	domain := "rauschig.org"
+	subdomain := fmt.Sprintf("test-%s", RandomShortId())
+
+	// create the record
+	response, err := client.Dns.CreateRecord(context.TODO(), CreateRecordRequest{
+		Domain:  domain,
+		Name:    subdomain,
+		Type:    "TXT",
+		Content: "my-original-value",
+		Ttl:     Int(1200),
+		Notes:   String("created by porkbun-dyndns"),
+		Prio:    Int(10),
+	})
+	// make sure the record even if an error is raised during the test
+	defer func() {
+		client.Dns.DeleteRecordById(context.TODO(), DeleteRecordByIdRequest{
+			Domain: domain,
+			Id:     response.Id,
+		})
+	}()
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// assert the record was created as expected
+	resp, err := client.Dns.GetRecordById(context.TODO(), GetRecordByIdRequest{domain, response.Id})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	record := resp.Records[0]
+	assert.Equal(t, RecordType("TXT"), record.Type)
+	assert.Equal(t, "my-original-value", record.Content)
+	assert.Equal(t, "created by porkbun-dyndns", record.Notes)
+	assert.Equal(t, subdomain+"."+domain, record.Name)
+	assert.Equal(t, "1200", record.Ttl)
+	assert.Equal(t, "10", record.Priority)
+
+	// update the record by id by not passing a TTL or the original name (subdomain)
+	err = client.Dns.UpdateRecordById(context.TODO(), UpdateRecordByIdRequest{
+		Domain:  domain,
+		Id:      response.Id,
+		Type:    "TXT",
+		Content: "my-updated-value",
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	resp, err = client.Dns.GetRecordById(context.TODO(), GetRecordByIdRequest{domain, response.Id})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	record = resp.Records[0]
+	assert.Equal(t, RecordType("TXT"), record.Type)
+	assert.Equal(t, "my-updated-value", record.Content)
+	assert.Equal(t, "created by porkbun-dyndns", record.Notes)
+	// note how *some* values we originally created were overwritten with a default because they were omitted in the
+	// update request, including the record name! (subdomain removed)
+	assert.Equal(t, domain, record.Name)
+	assert.Equal(t, "600", record.Ttl)
+	assert.Equal(t, "0", record.Priority)
+}
+
 func TestDnsService_CreateRecord_WithInvalidType(t *testing.T) {
 	client := NewClient(WithEnvironmentCredentials())
 

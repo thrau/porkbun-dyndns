@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -25,8 +26,8 @@ func init() {
 	rootCmd.AddCommand(NewListRecordsCommand(app))
 	rootCmd.AddCommand(NewGetRecordsCommand(app))
 	rootCmd.AddCommand(NewGetRecordCommand(app))
-	rootCmd.AddCommand(NewUpdateRecordsCommand(app))
 	rootCmd.AddCommand(NewCreateRecordCommand(app))
+	rootCmd.AddCommand(NewUpdateRecordsCommand(app))
 	rootCmd.AddCommand(NewUpdateRecordCommand(app))
 	rootCmd.AddCommand(NewDeleteRecordCommand(app))
 	rootCmd.AddCommand(NewDeleteRecordsCommand(app))
@@ -329,53 +330,38 @@ func NewCreateRecordCommand(app *App) *cobra.Command {
 func NewUpdateRecordCommand(app *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update-record --domain <domain> --id <id> --type <type> --content <content>",
-		Short: "Update a specific DNS record by ID",
+		Short: "Update a specific DNS record by ID. Merges with existing record fields.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			domain, err := cmd.Flags().GetString("domain")
+			builder := NewUpdateRequestBuilder()
+			err := builder.SetValuesFromCommandFlags(cmd)
 			if err != nil {
 				return err
 			}
-			id, err := cmd.Flags().GetInt("id")
-			if err != nil {
-				return err
-			}
-			recordType, err := cmd.Flags().GetString("type")
-			if err != nil {
-				return err
-			}
-			content, err := cmd.Flags().GetString("content")
-			if err != nil {
-				return err
-			}
-			notes, err := cmd.Flags().GetString("notes")
-			if err != nil {
-				return err
-			}
-			prio, err := cmd.Flags().GetInt("priority")
-			if err != nil {
-				return err
-			}
-			ttl, err := cmd.Flags().GetInt("ttl")
-			if err != nil {
-				return err
-			}
-
 			cmd.SilenceUsage = true
 
-			updateRequest := api.UpdateRecordByIdRequest{
-				Domain:  domain,
-				Id:      id,
-				Type:    api.RecordType(recordType),
-				Content: content,
+			// first, get the original record
+			getRecordResp, err := app.client.Dns.GetRecordById(cmd.Context(), api.GetRecordByIdRequest{
+				Domain: builder.Domain,
+				Id:     builder.Id,
+			})
+			if err != nil {
+				return err
 			}
-			if cmd.Flags().Changed("notes") {
-				updateRequest.Notes = api.String(notes)
+			originalRecord := getRecordResp.Records[0]
+			// set unset field in the update request to the original record's value
+			err = builder.SetDefaultValuesFromRecord(originalRecord)
+			if err != nil {
+				return err
 			}
-			if cmd.Flags().Changed("priority") {
-				updateRequest.Priority = api.Int(prio)
+
+			updateRequest, err := builder.Build()
+			if err != nil {
+				return err
 			}
-			if cmd.Flags().Changed("ttl") {
-				updateRequest.Ttl = api.Int(ttl)
+
+			if !CheckWouldUpdate(originalRecord, updateRequest) {
+				fmt.Printf("Record would not be updated: %s %s %s\n", originalRecord.Type, originalRecord.Name, originalRecord.Content)
+				return nil
 			}
 
 			err = app.client.Dns.UpdateRecordById(cmd.Context(), updateRequest)
@@ -388,15 +374,15 @@ func NewUpdateRecordCommand(app *App) *cobra.Command {
 
 	cmd.Flags().String("domain", "", "Domain name of the record")
 	cmd.Flags().Int("id", 0, "ID of the record to update")
-	cmd.Flags().String("type", "", "Type of the record (A, MX, CNAME, TXT, etc.)")
 	cmd.Flags().String("content", "", "The content of the record to set")
+	cmd.Flags().String("subdomain", "", "The new subdomain of the record (optional)")
+	cmd.Flags().String("type", "", "The new type of the record (A, MX, CNAME, TXT, etc.) (optional)")
 	cmd.Flags().String("notes", "", "Notes to store with the record (optional)")
 	cmd.Flags().Int("priority", 0, "Priority for MX or SRV records (optional)")
 	cmd.Flags().Int("ttl", 0, "Time to live in seconds (optional)")
 
 	_ = cmd.MarkFlagRequired("domain")
 	_ = cmd.MarkFlagRequired("id")
-	_ = cmd.MarkFlagRequired("type")
 	_ = cmd.MarkFlagRequired("content")
 
 	return cmd
@@ -489,4 +475,12 @@ func SplitDomain(name string) (domain string, subdomain string) {
 		subdomain = strings.Join(parts[:len(parts)-2], ".")
 	}
 	return domain, subdomain
+}
+
+func toInt(s string) *int {
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return nil
+	}
+	return api.Int(i)
 }

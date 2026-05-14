@@ -73,6 +73,13 @@ Get a specific record by Porkbun record ID
 porkbun-dns get-record --domain example.com --id 123456789
 ```
 
+Create a new DNS record (prints the new record ID on success):
+
+```sh
+porkbun-dns create-record --name srv.example.com --type A --content $(porkbun-dns myip)
+porkbun-dns create-record --name _dmarc.example.com --type TXT --content "v=DMARC1; p=none" --ttl 3600
+```
+
 Update records by name and type (replaces *all* records of that type!).
 Note that update-records will only succeed if the value is different from the current value.
 
@@ -82,18 +89,15 @@ porkbun-dns update-records --name www.example.com --type A --content $(porkbun-d
 porkbun-dns update-records --name www.example.com --type CNAME --content "srv.example.com" --ttl 3600 --notes "set by $(whoami) at $(date)"
 ```
 
-Create a new DNS record (prints the new record ID on success):
+
+Update a specific record by its Porkbun record ID by merging the new values with the existing ones.
+Note that this method behaves differently from the underlying API method, which would replace the existing record entirely.
 
 ```sh
-porkbun-dns create-record --name srv.example.com --type A --content $(porkbun-dns myip)
-porkbun-dns create-record --name _dmarc.example.com --type TXT --content "v=DMARC1; p=none" --ttl 3600
-```
-
-Update a specific record by its Porkbun record ID:
-
-```sh
-porkbun-dns update-record --domain example.com --id 123456789 --type TXT --content "my-new-dns-challenge"
-porkbun-dns update-record --domain example.com --id 123456789 --type CNAME --content "srv.example.com" --ttl 600
+# suppose this is the ID of a TXT record for _acme-challenge.example.com
+porkbun-dns update-record --domain example.com --id 123456789 --content "my-new-dns-challenge"
+# you can also completely change the record type and content of a record
+porkbun-dns update-record --domain example.com --id 123456789 --type A --content "127.0.0.1" --ttl 600
 ```
 
 Delete a specific record by its Porkbun record ID:

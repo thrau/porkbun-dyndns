@@ -92,6 +92,7 @@ type UpdateRecordByIdRequest struct {
 	Id       int        `json:"-"`
 	Type     RecordType `json:"type"`
 	Content  string     `json:"content"`
+	Name     *string    `json:"name,omitempty"`
 	Notes    *string    `json:"notes,omitempty"`
 	Priority *int       `json:"prio,omitempty"`
 	Ttl      *int       `json:"ttl,omitempty"`
@@ -139,6 +140,8 @@ type DNSService interface {
 	UpdateRecords(ctx context.Context, req UpdateRecordsRequest) (err error)
 
 	// UpdateRecordById updates a specific DNS record by its Porkbun record ID.
+	// Note that *some* omitted optional fields (Name/Subdomain, Priority, TTL) will be reset to their default values rather than preserved from the existing record.
+	// Most notably, if the Name field is omitted, the record will be updated to the root domain even if it was originally a subdomain.
 	UpdateRecordById(ctx context.Context, req UpdateRecordByIdRequest) (err error)
 
 	// DeleteRecord deletes all DNS records for a given domain, type, and subdomain.
