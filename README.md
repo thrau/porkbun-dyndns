@@ -14,6 +14,28 @@ It provides
 * Make sure API access is enabled for your domain. 
 * Create an API key, you can do this in the [account API settings](https://porkbun.com/account/api).
 
+## Use cases
+
+### Cron script to update DNS record with the current IP address
+
+If you prefer a manual approach to Dynamic DNS over using the daemon, you can use a cron job to update your DNS records with the current IP address.
+First, unless the record already exists, create a record in Porkbun for your domain with your current IP address:
+
+```sh
+porkbun-dns create-record --name dyndns.example.com --type A --content $(porkbun-dns myip)
+```
+
+Now, you can use a cron job to update the record with the current IP address every 15 minutes.
+Add a note to make sure the record is updated correctly (see update-records help for more details).
+```sh
+crontab -e
+```
+
+Add:
+```
+*/15 * * * * porkbun-dns update-records --name dyndns.example.com --type A --content $(porkbun-dns myip) --notes "last updated at $(date)"
+```
+
 ## Usage
 
 ### `porkbun-dns` CLI
@@ -81,14 +103,13 @@ porkbun-dns create-record --name _dmarc.example.com --type TXT --content "v=DMAR
 ```
 
 Update records by name and type (replaces *all* records of that type!).
-Note that update-records will only succeed if the value is different from the current value.
+Note that update-records will only succeed if the record would change, and will otherwise return an `EDIT_ERROR_WE_WERE_UNABLE_TO_EDIT_THE_DNS_RECORD` error.
+You can work around this by using either the `update-record` method (which checks this explicitly, but requires the record ID), or update the `--notes` field of the record to include the current time.  
 
 ```sh
-porkbun-dns update-records --name www.example.com --type A --content 192.168.1.1
-porkbun-dns update-records --name www.example.com --type A --content $(porkbun-dns myip)
-porkbun-dns update-records --name www.example.com --type CNAME --content "srv.example.com" --ttl 3600 --notes "set by $(whoami) at $(date)"
+porkbun-dns update-records --name www.example.com --type CNAME --content srv.example.com --ttl 3600
+porkbun-dns update-records --name www.example.com --type A --content $(porkbun-dns myip) --notes "updated at $(date)"
 ```
-
 
 Update a specific record by its Porkbun record ID by merging the new values with the existing ones.
 Note that this method behaves differently from the underlying API method, which would replace the existing record entirely.
