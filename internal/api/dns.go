@@ -22,9 +22,22 @@ type DNSRecord struct {
 	Notes string `json:"notes"`
 }
 
+type DNSRecordUpdate struct {
+	Content  string  `json:"content"`
+	Notes    *string `json:"notes,omitempty"`
+	Priority *int    `json:"prio,omitempty"`
+	Ttl      *int    `json:"ttl,omitempty"`
+}
+
 type retrieveRecordsResponse struct {
 	Status  string      `json:"status"`
 	Records []DNSRecord `json:"records"`
+}
+
+type RecordsUpdatedResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Code    string `json:"code"`
 }
 
 type DNSService interface {
@@ -32,6 +45,7 @@ type DNSService interface {
 	GetRecordById(ctx context.Context, domain string, id string) ([]DNSRecord, error)
 	GetRecordByType(ctx context.Context, domain string, recordType string) ([]DNSRecord, error)
 	GetRecordByNameAndType(ctx context.Context, domain string, subdomain string, recordType string) ([]DNSRecord, error)
+	UpdateRecordByNameAndType(ctx context.Context, domain string, subdomain string, recordType string, record *DNSRecordUpdate) error
 }
 
 type dnsService struct {
@@ -85,4 +99,18 @@ func (s *dnsService) GetRecordByNameAndType(ctx context.Context, domain string, 
 		return nil, fmt.Errorf("%s record %s in domain %s not found", recordType, subdomain, domain)
 	}
 	return resp.Records, nil
+}
+
+func (s *dnsService) UpdateRecordByNameAndType(ctx context.Context, domain string, subdomain string, recordType string, record *DNSRecordUpdate) error {
+	var resp RecordsUpdatedResponse
+
+	path := fmt.Sprintf("/dns/editByNameType/%s/%s/%s", domain, recordType, subdomain)
+	err := s.client.PostJson(ctx, path, record, &resp)
+	if err != nil {
+		return err
+	}
+	if resp.Status != "SUCCESS" {
+		return fmt.Errorf("failed to update record: status=%s, code=%s, message=%s", resp.Status, resp.Code, resp.Message)
+	}
+	return nil
 }

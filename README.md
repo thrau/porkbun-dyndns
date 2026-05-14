@@ -49,10 +49,13 @@ porkbun-dyndns get-record --name example.com --type A
 porkbun-dyndns get-record --name www.example.com --type A
 ```
 
-Update a record by name and type (replaces *all* records of that type!)
+Update a record by name and type (replaces *all* records of that type!).
+Note that update-record will only succeed if the value is different from the current value.
 
 ```sh
-porkbun-dyndns update-record --name www.example.com --type A 192.168.1.1
+porkbun-dyndns update-record --name www.example.com --type A --content 192.168.1.1
+porkbun-dyndns update-record --name www.example.com --type A --content $(porkbun-dyndns myip)
+porkbun-dyndns update-record --name www.example.com --type CNAME --content "srv.example.com" --ttl 3600 --notes "set by $(whoami) at $(date)"
 ```
 
 ### Daemon Usage
