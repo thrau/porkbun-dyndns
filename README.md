@@ -42,20 +42,26 @@ List all domain records via the API:
 porkbun-dyndns list-records --domain example.com
 ```
 
-Show a specific A record
+Show specific A records
 
 ```sh
-porkbun-dyndns get-record --name example.com --type A
-porkbun-dyndns get-record --name www.example.com --type A
+porkbun-dyndns get-records --name example.com --type A
+porkbun-dyndns get-records --name www.example.com --type A
 ```
 
-Update a record by name and type (replaces *all* records of that type!).
-Note that update-record will only succeed if the value is different from the current value.
+Get a specific record by Porkbun record ID
 
 ```sh
-porkbun-dyndns update-record --name www.example.com --type A --content 192.168.1.1
-porkbun-dyndns update-record --name www.example.com --type A --content $(porkbun-dyndns myip)
-porkbun-dyndns update-record --name www.example.com --type CNAME --content "srv.example.com" --ttl 3600 --notes "set by $(whoami) at $(date)"
+porkbun-dyndns get-records --domain example.com --id 123456789
+```
+
+Update records by name and type (replaces *all* records of that type!).
+Note that update-records will only succeed if the value is different from the current value.
+
+```sh
+porkbun-dyndns update-records --name www.example.com --type A --content 192.168.1.1
+porkbun-dyndns update-records --name www.example.com --type A --content $(porkbun-dyndns myip)
+porkbun-dyndns update-records --name www.example.com --type CNAME --content "srv.example.com" --ttl 3600 --notes "set by $(whoami) at $(date)"
 ```
 
 ### Daemon Usage

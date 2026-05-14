@@ -25,20 +25,6 @@ func NewClient(opts ...ClientOption) *Client {
 	return c
 }
 
-// WithHTTPClient sets a custom HTTP client
-func WithHTTPClient(client *http.Client) ClientOption {
-	return func(c *Client) {
-		c.http = client
-	}
-}
-
-// WithBaseURL sets the base URL for API requests
-func WithBaseURL(baseUrl string) ClientOption {
-	return func(c *Client) {
-		c.baseUrl = baseUrl
-	}
-}
-
 // WithCredentials sets the API key and secret key for API authentication
 func WithCredentials(apiKey, secretKey string) ClientOption {
 	return func(c *Client) {

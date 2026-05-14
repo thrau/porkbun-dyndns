@@ -23,6 +23,7 @@ func init() {
 
 	rootCmd.AddCommand(NewMyIpCommand(app))
 	rootCmd.AddCommand(NewListRecordsCommand(app))
+	rootCmd.AddCommand(NewGetRecordsCommand(app))
 	rootCmd.AddCommand(NewGetRecordCommand(app))
 	rootCmd.AddCommand(NewUpdateRecordCommand(app))
 }
@@ -56,12 +57,12 @@ func NewListRecordsCommand(app *App) *cobra.Command {
 			}
 			cmd.SilenceUsage = true
 
-			records, err := app.client.Dns.ListRecords(cmd.Context(), domain)
+			response, err := app.client.Dns.ListRecords(cmd.Context(), domain)
 			if err != nil {
 				return err
 			}
 
-			jsonData, err := json.MarshalIndent(records, "", "  ")
+			jsonData, err := json.MarshalIndent(response.Records, "", "  ")
 			if err != nil {
 				return err
 			}
@@ -78,41 +79,35 @@ func NewListRecordsCommand(app *App) *cobra.Command {
 	return cmd
 }
 
-func NewGetRecordCommand(app *App) *cobra.Command {
+func NewGetRecordsCommand(app *App) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "get-record --name <name> [--id <id> | --type <type>]",
-		Short: "Get specific DNS records",
+		Use:   "get-records --name <name> --type <type>",
+		Short: "Get DNS records by name and type",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			recordType, err := cmd.Flags().GetString("type")
 			if err != nil {
 				return err
 			}
 
 			domain, subdomain := SplitDomain(name)
 
-			id, _ := cmd.Flags().GetString("id")
-			recordType, _ := cmd.Flags().GetString("type")
-
 			cmd.SilenceUsage = true
 
-			var records []api.DNSRecord
-			if id != "" {
-				records, err = app.client.Dns.GetRecordById(cmd.Context(), domain, id)
-			} else if recordType != "" {
-				if subdomain != "" {
-					records, err = app.client.Dns.GetRecordByNameAndType(cmd.Context(), domain, subdomain, recordType)
-				} else {
-					records, err = app.client.Dns.GetRecordByType(cmd.Context(), domain, recordType)
-				}
-			} else {
-				return fmt.Errorf("either --id or --type must be provided")
-			}
+			resp, err := app.client.Dns.GetRecords(cmd.Context(), api.GetRecordsRequest{
+				Domain:    domain,
+				Subdomain: subdomain,
+				Type:      api.RecordType(recordType),
+			})
 
 			if err != nil {
 				return err
 			}
 
-			jsonData, err := json.MarshalIndent(records, "", "  ")
+			jsonData, err := json.MarshalIndent(resp.Records, "", "  ")
 			if err != nil {
 				return err
 			}
@@ -123,24 +118,64 @@ func NewGetRecordCommand(app *App) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("name", "", "Name of the record to retrieve (e.g., www.example.com or example.com)")
+	cmd.Flags().String("name", "", "Name of the records to retrieve (e.g., www.example.com or example.com)")
+	cmd.Flags().String("type", "", "Type of the records to retrieve (A, MX, CNAME, etc.)")
+
 	_ = cmd.MarkFlagRequired("name")
+	_ = cmd.MarkFlagRequired("type")
 
-	// the records can be retrieved either by id
-	cmd.Flags().String("id", "", "ID of the record to retrieve (if set, a subdomain in the name will be ignored)")
+	return cmd
+}
 
-	// or by type
-	cmd.Flags().String("type", "", "Type of the record to retrieve (A, MX, CNAME, etc.)")
+func NewGetRecordCommand(app *App) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "get-record --domain <domain> --id <id>",
+		Short: "Get a specific DNS record by ID",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			domain, err := cmd.Flags().GetString("domain")
+			if err != nil {
+				return err
+			}
+			id, err := cmd.Flags().GetInt("id")
+			if err != nil {
+				return err
+			}
 
-	cmd.MarkFlagsMutuallyExclusive("id", "type")
+			cmd.SilenceUsage = true
+
+			resp, err := app.client.Dns.GetRecordById(cmd.Context(), api.GetRecordByIdRequest{
+				Domain: domain,
+				Id:     id,
+			})
+
+			if err != nil {
+				return err
+			}
+
+			jsonData, err := json.MarshalIndent(resp.Records[0], "", "  ")
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(string(jsonData))
+
+			return nil
+		},
+	}
+
+	cmd.Flags().String("domain", "", "Domain name of the record")
+	cmd.Flags().Int("id", 0, "ID of the record to retrieve")
+
+	_ = cmd.MarkFlagRequired("domain")
+	_ = cmd.MarkFlagRequired("id")
 
 	return cmd
 }
 
 func NewUpdateRecordCommand(app *App) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update-record --name <name> --type <type> --content <content>",
-		Short: "Update a DNS record by name and type",
+		Use:   "update-records --name <name> --type <type> --content <content>",
+		Short: "Update DNS records by name and type",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			content, err := cmd.Flags().GetString("content")
@@ -173,22 +208,24 @@ func NewUpdateRecordCommand(app *App) *cobra.Command {
 
 			cmd.SilenceUsage = true
 
-			// build the update payload
-			update := &api.DNSRecordUpdate{
-				Content: content,
+			updateRequest := api.UpdateRecordsRequest{
+				Domain:    domain,
+				Type:      api.RecordType(recordType),
+				Subdomain: subdomain,
+				Content:   content,
 			}
 			if cmd.Flags().Changed("notes") {
-				update.Notes = api.String(notes)
+				updateRequest.Notes = api.String(notes)
 			}
 			if cmd.Flags().Changed("prio") {
-				update.Priority = api.Int(prio)
+				updateRequest.Priority = api.Int(prio)
 			}
 			if cmd.Flags().Changed("ttl") {
-				update.Ttl = api.Int(ttl)
+				updateRequest.Ttl = api.Int(ttl)
 			}
 
 			// perform the update
-			err = app.client.Dns.UpdateRecordByNameAndType(cmd.Context(), domain, subdomain, recordType, update)
+			err = app.client.Dns.UpdateRecords(cmd.Context(), updateRequest)
 			if err != nil {
 				return err
 			}
