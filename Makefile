@@ -1,11 +1,11 @@
 all: build
 
 build:
-	go build -o bin/porkbun-dyndns ./cmd/porkbun-dyndns
-	go build -o bin/porkbun-dyndnsd ./cmd/porkbun-dyndnsd
+	go build -o bin/porkbun-dns ./cmd/porkbun-dns
+	go build -o bin/porkbun-ddnds ./cmd/porkbun-ddnsd
 
 clean:
-	rm -rf bin
+	rm -rf bin/
 
 test:
 	go test -v ./...

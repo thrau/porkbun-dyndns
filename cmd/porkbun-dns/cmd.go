@@ -10,7 +10,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "porkbun-dyndns",
+	Use:   "porkbun-dns",
 	Short: "Dynamic DNS utilities for Porkbun",
 }
 
