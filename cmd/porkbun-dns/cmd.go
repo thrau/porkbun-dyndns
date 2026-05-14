@@ -25,7 +25,11 @@ func init() {
 	rootCmd.AddCommand(NewListRecordsCommand(app))
 	rootCmd.AddCommand(NewGetRecordsCommand(app))
 	rootCmd.AddCommand(NewGetRecordCommand(app))
+	rootCmd.AddCommand(NewUpdateRecordsCommand(app))
+	rootCmd.AddCommand(NewCreateRecordCommand(app))
 	rootCmd.AddCommand(NewUpdateRecordCommand(app))
+	rootCmd.AddCommand(NewDeleteRecordCommand(app))
+	rootCmd.AddCommand(NewDeleteRecordsCommand(app))
 }
 
 func NewMyIpCommand(app *App) *cobra.Command {
@@ -172,7 +176,7 @@ func NewGetRecordCommand(app *App) *cobra.Command {
 	return cmd
 }
 
-func NewUpdateRecordCommand(app *App) *cobra.Command {
+func NewUpdateRecordsCommand(app *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update-records --name <name> --type <type> --content <content>",
 		Short: "Update DNS records by name and type",
@@ -243,6 +247,232 @@ func NewUpdateRecordCommand(app *App) *cobra.Command {
 	_ = cmd.MarkFlagRequired("name")
 	_ = cmd.MarkFlagRequired("type")
 	_ = cmd.MarkFlagRequired("content")
+
+	return cmd
+}
+
+func NewCreateRecordCommand(app *App) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "create-record --name <name> --type <type> --content <content>",
+		Short: "Create a new DNS record and print its ID",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			recordType, err := cmd.Flags().GetString("type")
+			if err != nil {
+				return err
+			}
+			content, err := cmd.Flags().GetString("content")
+			if err != nil {
+				return err
+			}
+			notes, err := cmd.Flags().GetString("notes")
+			if err != nil {
+				return err
+			}
+			prio, err := cmd.Flags().GetInt("priority")
+			if err != nil {
+				return err
+			}
+			ttl, err := cmd.Flags().GetInt("ttl")
+			if err != nil {
+				return err
+			}
+
+			domain, subdomain := SplitDomain(name)
+
+			cmd.SilenceUsage = true
+
+			createRequest := api.CreateRecordRequest{
+				Domain:  domain,
+				Name:    subdomain,
+				Type:    api.RecordType(recordType),
+				Content: content,
+			}
+			if cmd.Flags().Changed("notes") {
+				createRequest.Notes = api.String(notes)
+			}
+			if cmd.Flags().Changed("priority") {
+				createRequest.Prio = api.Int(prio)
+			}
+			if cmd.Flags().Changed("ttl") {
+				createRequest.Ttl = api.Int(ttl)
+			}
+
+			resp, err := app.client.Dns.CreateRecord(cmd.Context(), createRequest)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(resp.Id)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().String("name", "", "Name of the record to create (e.g., www.example.com or example.com)")
+	cmd.Flags().String("type", "", "Type of the record to create (A, MX, CNAME, TXT, etc.)")
+	cmd.Flags().String("content", "", "The content of the record")
+	cmd.Flags().String("notes", "", "Notes to store with the record (optional)")
+	cmd.Flags().Int("priority", 0, "Priority for MX or SRV records (optional)")
+	cmd.Flags().Int("ttl", 0, "Time to live in seconds (optional)")
+
+	_ = cmd.MarkFlagRequired("name")
+	_ = cmd.MarkFlagRequired("type")
+	_ = cmd.MarkFlagRequired("content")
+
+	return cmd
+}
+
+func NewUpdateRecordCommand(app *App) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "update-record --domain <domain> --id <id> --type <type> --content <content>",
+		Short: "Update a specific DNS record by ID",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			domain, err := cmd.Flags().GetString("domain")
+			if err != nil {
+				return err
+			}
+			id, err := cmd.Flags().GetInt("id")
+			if err != nil {
+				return err
+			}
+			recordType, err := cmd.Flags().GetString("type")
+			if err != nil {
+				return err
+			}
+			content, err := cmd.Flags().GetString("content")
+			if err != nil {
+				return err
+			}
+			notes, err := cmd.Flags().GetString("notes")
+			if err != nil {
+				return err
+			}
+			prio, err := cmd.Flags().GetInt("priority")
+			if err != nil {
+				return err
+			}
+			ttl, err := cmd.Flags().GetInt("ttl")
+			if err != nil {
+				return err
+			}
+
+			cmd.SilenceUsage = true
+
+			updateRequest := api.UpdateRecordByIdRequest{
+				Domain:  domain,
+				Id:      id,
+				Type:    api.RecordType(recordType),
+				Content: content,
+			}
+			if cmd.Flags().Changed("notes") {
+				updateRequest.Notes = api.String(notes)
+			}
+			if cmd.Flags().Changed("priority") {
+				updateRequest.Priority = api.Int(prio)
+			}
+			if cmd.Flags().Changed("ttl") {
+				updateRequest.Ttl = api.Int(ttl)
+			}
+
+			err = app.client.Dns.UpdateRecordById(cmd.Context(), updateRequest)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().String("domain", "", "Domain name of the record")
+	cmd.Flags().Int("id", 0, "ID of the record to update")
+	cmd.Flags().String("type", "", "Type of the record (A, MX, CNAME, TXT, etc.)")
+	cmd.Flags().String("content", "", "The content of the record to set")
+	cmd.Flags().String("notes", "", "Notes to store with the record (optional)")
+	cmd.Flags().Int("priority", 0, "Priority for MX or SRV records (optional)")
+	cmd.Flags().Int("ttl", 0, "Time to live in seconds (optional)")
+
+	_ = cmd.MarkFlagRequired("domain")
+	_ = cmd.MarkFlagRequired("id")
+	_ = cmd.MarkFlagRequired("type")
+	_ = cmd.MarkFlagRequired("content")
+
+	return cmd
+}
+
+func NewDeleteRecordCommand(app *App) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "delete-record --domain <domain> --id <id>",
+		Short: "Delete a specific DNS record by ID",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			domain, err := cmd.Flags().GetString("domain")
+			if err != nil {
+				return err
+			}
+			id, err := cmd.Flags().GetInt("id")
+			if err != nil {
+				return err
+			}
+
+			cmd.SilenceUsage = true
+
+			err = app.client.Dns.DeleteRecordById(cmd.Context(), api.DeleteRecordByIdRequest{
+				Domain: domain,
+				Id:     id,
+			})
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().String("domain", "", "Domain name of the record")
+	cmd.Flags().Int("id", 0, "ID of the record to delete")
+
+	_ = cmd.MarkFlagRequired("domain")
+	_ = cmd.MarkFlagRequired("id")
+
+	return cmd
+}
+
+func NewDeleteRecordsCommand(app *App) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "delete-records --name <name> --type <type>",
+		Short: "Delete all DNS records matching a name and type",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			recordType, err := cmd.Flags().GetString("type")
+			if err != nil {
+				return err
+			}
+
+			domain, subdomain := SplitDomain(name)
+
+			cmd.SilenceUsage = true
+
+			err = app.client.Dns.DeleteRecord(cmd.Context(), api.DeleteRecordRequest{
+				Domain:    domain,
+				Type:      api.RecordType(recordType),
+				Subdomain: subdomain,
+			})
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().String("name", "", "Name of the records to delete (e.g., www.example.com or example.com)")
+	cmd.Flags().String("type", "", "Type of the records to delete (A, MX, CNAME, TXT, etc.)")
+
+	_ = cmd.MarkFlagRequired("name")
+	_ = cmd.MarkFlagRequired("type")
 
 	return cmd
 }

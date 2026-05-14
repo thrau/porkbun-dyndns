@@ -44,6 +44,21 @@ List all domain records via the API:
 ```sh
 porkbun-dns list-records --domain example.com
 ```
+Might return:
+```json
+[
+  {
+    "id": "123456789",
+    "name": "srv.example.com",
+    "type": "A",
+    "content": "127.0.0.1",
+    "ttl": "600",
+    "prio": "0",
+    "notes": ""
+  },
+  ...
+}
+```
 
 Show specific A records
 
@@ -55,7 +70,7 @@ porkbun-dns get-records --name www.example.com --type A
 Get a specific record by Porkbun record ID
 
 ```sh
-porkbun-dns get-records --domain example.com --id 123456789
+porkbun-dns get-record --domain example.com --id 123456789
 ```
 
 Update records by name and type (replaces *all* records of that type!).
@@ -65,6 +80,33 @@ Note that update-records will only succeed if the value is different from the cu
 porkbun-dns update-records --name www.example.com --type A --content 192.168.1.1
 porkbun-dns update-records --name www.example.com --type A --content $(porkbun-dns myip)
 porkbun-dns update-records --name www.example.com --type CNAME --content "srv.example.com" --ttl 3600 --notes "set by $(whoami) at $(date)"
+```
+
+Create a new DNS record (prints the new record ID on success):
+
+```sh
+porkbun-dns create-record --name srv.example.com --type A --content $(porkbun-dns myip)
+porkbun-dns create-record --name _dmarc.example.com --type TXT --content "v=DMARC1; p=none" --ttl 3600
+```
+
+Update a specific record by its Porkbun record ID:
+
+```sh
+porkbun-dns update-record --domain example.com --id 123456789 --type TXT --content "my-new-dns-challenge"
+porkbun-dns update-record --domain example.com --id 123456789 --type CNAME --content "srv.example.com" --ttl 600
+```
+
+Delete a specific record by its Porkbun record ID:
+
+```sh
+porkbun-dns delete-record --domain example.com --id 123456789
+```
+
+Delete all records matching a name and type:
+
+```sh
+porkbun-dns delete-records --name srv.example.com --type A
+porkbun-dns delete-records --name _acme-challenge.example.com --type TXT
 ```
 
 ### DynDNS Daemon
