@@ -1,6 +1,9 @@
 *.swp
 *~
+
 .idea/
+.junie/
+
 bin/
 
 .env
