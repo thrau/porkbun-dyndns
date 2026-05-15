@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/thrau/porkbun-dyndns/internal/api"
+	"github.com/thrau/porkbun-dyndns/internal/util"
 )
 
 var rootCmd = &cobra.Command{
@@ -98,7 +98,7 @@ func NewGetRecordsCommand(app *App) *cobra.Command {
 				return err
 			}
 
-			domain, subdomain := SplitDomain(name)
+			domain, subdomain := util.SplitDomain(name)
 
 			cmd.SilenceUsage = true
 
@@ -209,7 +209,7 @@ func NewUpdateRecordsCommand(app *App) *cobra.Command {
 			}
 
 			// parse domain and subdomain (www.example.com = example.com, www)
-			domain, subdomain := SplitDomain(name)
+			domain, subdomain := util.SplitDomain(name)
 
 			cmd.SilenceUsage = true
 
@@ -282,7 +282,7 @@ func NewCreateRecordCommand(app *App) *cobra.Command {
 				return err
 			}
 
-			domain, subdomain := SplitDomain(name)
+			domain, subdomain := util.SplitDomain(name)
 
 			cmd.SilenceUsage = true
 
@@ -438,7 +438,7 @@ func NewDeleteRecordsCommand(app *App) *cobra.Command {
 				return err
 			}
 
-			domain, subdomain := SplitDomain(name)
+			domain, subdomain := util.SplitDomain(name)
 
 			cmd.SilenceUsage = true
 
@@ -461,20 +461,6 @@ func NewDeleteRecordsCommand(app *App) *cobra.Command {
 	_ = cmd.MarkFlagRequired("type")
 
 	return cmd
-}
-
-// SplitDomain splits a fully qualified domain name into the domain and subdomain portions.
-// For example, "www.example.com" would return "example.com", "www".
-// If the name does not contain a subdomain, the subdomain will be an empty string.
-func SplitDomain(name string) (domain string, subdomain string) {
-	parts := strings.Split(name, ".")
-	domain = name
-	subdomain = ""
-	if len(parts) > 2 {
-		domain = strings.Join(parts[len(parts)-2:], ".")
-		subdomain = strings.Join(parts[:len(parts)-2], ".")
-	}
-	return domain, subdomain
 }
 
 func toInt(s string) *int {

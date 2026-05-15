@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/thrau/porkbun-dyndns/internal/util"
 )
 
 func TestListRecords(t *testing.T) {
@@ -144,7 +145,7 @@ func TestDnsService_CRUDRoundtrip(t *testing.T) {
 	client := NewClient(WithEnvironmentCredentials())
 
 	domain := "rauschig.org"
-	subdomain := fmt.Sprintf("test-%s", RandomShortId())
+	subdomain := fmt.Sprintf("test-%s", util.RandomShortId())
 
 	// create the record
 	response, err := client.Dns.CreateRecord(context.TODO(), CreateRecordRequest{
@@ -223,7 +224,7 @@ func TestDnsService_UpdateRecordById(t *testing.T) {
 	client := NewClient(WithEnvironmentCredentials())
 
 	domain := "rauschig.org"
-	subdomain := fmt.Sprintf("test-%s", RandomShortId())
+	subdomain := fmt.Sprintf("test-%s", util.RandomShortId())
 
 	// create the record
 	response, err := client.Dns.CreateRecord(context.TODO(), CreateRecordRequest{

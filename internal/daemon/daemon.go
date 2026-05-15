@@ -56,7 +56,11 @@ func (d *Daemon) syncRecord(ctx context.Context) error {
 
 	// case: new record is needed
 	if len(resp.Records) == 0 {
-		fmt.Printf("Creating a new DNS record: %s A %s\n", d.config.GetRecordFqdn(), ip.YourIp)
+		fmt.Printf(
+			"[%s] creating a new DNS record: %s A %s\n", time.Now().Format(time.RFC3339),
+			d.config.GetRecordFqdn(),
+			ip.YourIp,
+		)
 
 		_, err := d.dns.CreateRecord(ctx, api.CreateRecordRequest{
 			Domain:  d.config.Domain,
@@ -101,12 +105,18 @@ func (d *Daemon) syncRecord(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to update DNS record %s: %w", d.config.GetRecordFqdn(), err)
 	}
-	fmt.Printf("Updated DNS record: %s A %s\n", d.config.GetRecordFqdn(), ip.YourIp)
+	fmt.Printf("[%s] updated DNS record: %s A %s\n", time.Now().Format(time.RFC3339), d.config.GetRecordFqdn(), ip.YourIp)
 	return nil
 }
 
 func (d *Daemon) Run(ctx context.Context) {
+	// run once immediately (otherwise we would wait for the first tick)
+	err := d.syncRecord(ctx)
+	if err != nil {
+		fmt.Printf("[%s] error: failed to sync DNS record: %v\n", time.Now().Format(time.RFC3339), err)
+	}
 
+	// now, start the loop
 	ticker := time.NewTicker(d.config.Interval)
 	defer ticker.Stop()
 
@@ -115,7 +125,7 @@ func (d *Daemon) Run(ctx context.Context) {
 		case <-ticker.C:
 			err := d.syncRecord(ctx)
 			if err != nil {
-				fmt.Printf("Error: failed to sync DNS record: %v\n", err)
+				fmt.Printf("[%s] error: failed to sync DNS record: %v\n", time.Now().Format(time.RFC3339), err)
 			}
 		case <-d.closeChan:
 			return

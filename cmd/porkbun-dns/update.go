@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/thrau/porkbun-dyndns/internal/api"
+	"github.com/thrau/porkbun-dyndns/internal/util"
 )
 
 // UpdateRequestBuilder is a helper used in the update-request command of the CLI, which builds an
@@ -94,7 +95,7 @@ func (b *UpdateRequestBuilder) SetDefaultValuesFromRecord(record api.DNSRecord) 
 		b.Type = api.String(string(record.Type))
 	}
 	if b.Subdomain == nil {
-		if _, subdomain := SplitDomain(record.Name); subdomain != "" {
+		if _, subdomain := util.SplitDomain(record.Name); subdomain != "" {
 			b.Subdomain = api.String(subdomain)
 		}
 	}
@@ -119,7 +120,7 @@ func CheckWouldUpdate(record api.DNSRecord, updateRequest api.UpdateRecordByIdRe
 		return true
 	}
 
-	_, recordSubdomain := SplitDomain(record.Name)
+	_, recordSubdomain := util.SplitDomain(record.Name)
 	updateSubdomain := ""
 	if updateRequest.Name != nil {
 		updateSubdomain = *updateRequest.Name

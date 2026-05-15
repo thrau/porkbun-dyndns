@@ -36,6 +36,11 @@ Add:
 */15 * * * * porkbun-dns update-records --name dyndns.example.com --type A --content $(porkbun-dns myip) --notes "last updated at $(date)"
 ```
 
+### Systemd service to keep DNS record up to date
+
+You can add the DynDNS daemon as a system service to run in the background.
+See the [DynDNS Daemon](#dyndns-daemon) section below.
+
 ## Usage
 
 ### `porkbun-dns` CLI
@@ -138,12 +143,77 @@ porkbun-dns delete-records --name _acme-challenge.example.com --type TXT
 
 The daemon runs in the background and automatically updates DNS records based on configuration.
 
-Run the daemon with a configuration file:
+Run the daemon with a specific configuration file:
 
 ```sh
-porkbun-ddnds --config /etc/porkbun-dyndns/daemon.conf
+porkbun-ddnds --config /etc/porkbun-ddnsd/config.toml
+```
+
+You should see something like
+```
+[2026-05-16T02:00:21+02:00] loading daemon config from /etc/porkbun-ddnsd/config.toml
+[2026-05-16T02:00:24+02:00] updated DNS record: mydomain.example.org A 12.34.56.78
+```
+
+Here's an example configuration file. Make sure the config file has limited permissions to keep secrets safe.
+
+```toml
+# name of the DNS record to update
+name = "mymachine.example.com"
+# interval between updates (in Go time.Duration format)
+interval = "5m"
+
+# porkbun API credentials
+api_key = "pk1_..."
+secret_key = "sk1_..."
 ```
 
 #### Systemd Service
 
-TODO
+You can run the DynDNS daemon as a systemd service to ensure it runs automatically at boot and restarts if it fails.
+
+Create a systemd service file at `/etc/systemd/system/porkbun-ddnsd.service`:
+
+```ini
+[Unit]
+Description=Porkbun Dynamic DNS Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/porkbun-ddnsd --config /etc/porkbun-ddnsd/config.toml
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Create your configuration file at `/etc/porkbun-ddnsd/config.toml` and set restrictive permissions:
+
+```sh
+sudo mkdir -p /etc/porkbun-ddnsd
+sudo nano /etc/porkbun-ddnsd/config.toml
+sudo chown root:porkbun-ddns /etc/porkbun-ddnsd/config.toml
+sudo chmod 600 /etc/porkbun-ddnsd/config.toml
+```
+
+Enable and start the service:
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl enable porkbun-ddnsd
+sudo systemctl start porkbun-ddnsd
+```
+
+Check the service status:
+
+```sh
+sudo systemctl status porkbun-ddnsd
+```
+
+View logs:
+
+```sh
+sudo journalctl -u porkbun-ddnsd -f
+```
