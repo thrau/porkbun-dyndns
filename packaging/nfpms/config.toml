@@ -1,0 +1,8 @@
+# name of the DNS record to update
+name = "mymachine.example.com"
+# interval between updates (in Go time.Duration format)
+interval = "5m"
+
+# porkbun API credentials
+api_key = "pk1_..."
+secret_key = "sk1_..."

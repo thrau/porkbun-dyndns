@@ -1,20 +1,18 @@
 Porkbun DynDNS: DNS utilities for Porkbun
 =========================================
 
-Client utilities for the [Porkbun](https://porkbun.com/) DNS API.
+Unofficial client utilities for the [Porkbun](https://porkbun.com/) DNS API.
 
-It provides
-* `porkbun-dns` a command-line interface for basic DNS record management via the Porkbun API.
+These include
 * `porkbun-ddnsd` a Dynamic DNS daemon that automatically keeps your DNS records synchronized with your current IP address.
-
-## Installation
-
-* Download the latest release from the [releases page](https://github.com/porkbun/porkbun-dyndns/releases).
-* Unpack the archive and place the `porkbun-dns` and/or `porkbun-ddnsd` binary into your path.
-* Make sure API access is enabled for your domain. 
-* Create an API key, you can do this in the [account API settings](https://porkbun.com/account/api).
+* `porkbun-dns` a command-line interface for basic DNS record management via the Porkbun API.
 
 ## Use cases
+
+### Systemd service to keep DNS record up to date
+
+You can add the DynDNS daemon as a system service to run in the background.
+See the [DynDNS Daemon](#dyndns-daemon) section below.
 
 ### Cron script to update DNS record with the current IP address
 
@@ -36,10 +34,39 @@ Add:
 */15 * * * * porkbun-dns update-records --name dyndns.example.com --type A --content $(porkbun-dns myip) --notes "last updated at $(date)"
 ```
 
-### Systemd service to keep DNS record up to date
+## Installation
 
-You can add the DynDNS daemon as a system service to run in the background.
-See the [DynDNS Daemon](#dyndns-daemon) section below.
+### Prepare your Porkbun account
+
+In your Porkbun domain settings:
+* Make sure API access is enabled for your domain.
+* Create an API key, you can do this in the [account API settings](https://porkbun.com/account/api).
+
+### Download and install
+
+Download the latest release from the [releases page](https://github.com/porkbun/porkbun-dyndns/releases).
+
+#### Manual install:
+* Unpack the archive and place the `porkbun-dns` and/or `porkbun-ddnsd` binary into your path.
+* Read more about the CLI and deamon usage below.
+
+#### Debian:
+* Download the latest `.deb` from the releases page and install it with
+  ```sh
+  sudo dpkg -i porkbun-dyndns_*.deb
+  ```
+* Edit the configuration to set your Porkbun API credentials. See [DynDNS Daemon](#dyndns-daemon) for details.
+  ```sh
+  sudo nano /etc/porkbun-ddnsd/config.toml
+  ```
+
+#### Arch Linux:
+* Download the latest `.pkg.tar.zst` from the releases page and install it with
+  ```sh
+  sudo pacman -U porkbun-dyndns-*.pkg.tar.zst
+  ```
+* Edit the configuration to set your Porkbun API credentials (see above).
+
 
 ## Usage
 
@@ -183,6 +210,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 ExecStart=/usr/local/bin/porkbun-ddnsd --config /etc/porkbun-ddnsd/config.toml
+ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 
 [Install]

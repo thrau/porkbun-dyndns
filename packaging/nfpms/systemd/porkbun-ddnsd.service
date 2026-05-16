@@ -1,0 +1,13 @@
+[Unit]
+Description=Porkbun Dynamic DNS Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/porkbun-ddnsd --config /etc/porkbun-ddnsd/config.toml
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

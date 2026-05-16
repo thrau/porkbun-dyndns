@@ -42,6 +42,32 @@ archives:
       {{- .Os }}_
       {{- .Arch }}
 
+nfpms:
+  - id: porkbun-dyndns-deb
+    package_name: porkbun-dyndns
+    ids:
+      - porkbun-dns
+      - porkbun-ddnsd
+    formats: [deb, archlinux]
+    vendor: thrau
+    homepage: https://github.com/thrau/porkbun-dyndns
+    maintainer: thrau
+    description: Porkbun Dynamic DNS daemon and CLI tools
+    license: MIT
+    contents:
+      - src: packaging/nfpms/systemd/porkbun-ddnsd.service
+        dst: /etc/systemd/system/porkbun-ddnsd.service
+      - src: packaging/nfpms/config.toml
+        dst: /etc/porkbun-ddnsd/config.toml
+        type: config|noreplace
+    scripts:
+      postinstall: packaging/nfpms/postinstall.sh
+    deb:
+      lintian_overrides:
+        - statically-linked-binary
+    archlinux:
+      packager: thrau
+
 checksum:
   name_template: checksums.txt
 

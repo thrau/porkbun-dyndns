@@ -6,8 +6,12 @@ build:
 
 clean:
 	rm -rf bin/
+	rm -rf dist/
+
+dist:
+	goreleaser release --snapshot
 
 test:
 	go test -v ./...
 
-.PHONY: all build clean test
+.PHONY: all build clean dist test
