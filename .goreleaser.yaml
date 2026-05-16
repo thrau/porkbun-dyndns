@@ -1,0 +1,49 @@
+version: 2
+
+project_name: porkbun-dyndns
+
+release:
+  github:
+    owner: thrau
+    name: porkbun-dyndns
+
+  draft: true
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: porkbun-dns
+    main: ./cmd/porkbun-dns
+    binary: porkbun-dns
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [386, amd64, arm64]
+
+  - id: porkbun-ddnsd
+    main: ./cmd/porkbun-ddnsd
+    binary: porkbun-ddnsd
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [386, amd64, arm64]
+
+archives:
+  - id: bundle
+    ids:
+      - porkbun-dns
+      - porkbun-ddnsd
+    formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
