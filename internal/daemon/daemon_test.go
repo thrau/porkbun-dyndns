@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -80,13 +81,17 @@ func newConfig() *Config {
 	}
 }
 
+func newDaemon(dns api.DNSService, util api.UtilService, config *Config) *Daemon {
+	return NewDaemon(dns, util, config, slog.Default())
+}
+
 func TestSyncRecord_IpError(t *testing.T) {
 	ctx := t.Context()
 	util := &mockUtilService{ipErr: errors.New("network down")}
 	dns := &mockDNSService{}
-	d := NewDaemon(dns, util, newConfig())
+	d := newDaemon(dns, util, newConfig())
 
-	err := d.syncRecord(ctx)
+	_, err := d.syncRecord(ctx)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get IP")
@@ -96,9 +101,9 @@ func TestSyncRecord_GetRecordsError(t *testing.T) {
 	ctx := t.Context()
 	util := &mockUtilService{ipResp: api.IpResponse{YourIp: "1.2.3.4"}}
 	dns := &mockDNSService{getErr: errors.New("dns lookup failed")}
-	d := NewDaemon(dns, util, newConfig())
+	d := newDaemon(dns, util, newConfig())
 
-	err := d.syncRecord(ctx)
+	_, err := d.syncRecord(ctx)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get DNS record")
@@ -112,9 +117,9 @@ func TestSyncRecord_NoRecords_CreateSuccess(t *testing.T) {
 		getResp: api.RetrieveRecordsResponse{Status: "SUCCESS", Records: []api.DNSRecord{}},
 	}
 	config := newConfig()
-	d := NewDaemon(dns, util, config)
+	d := newDaemon(dns, util, config)
 
-	err := d.syncRecord(ctx)
+	_, err := d.syncRecord(ctx)
 
 	assert.NoError(t, err)
 	assert.True(t, dns.createCalled)
@@ -130,9 +135,9 @@ func TestSyncRecord_NoRecords_CreateError(t *testing.T) {
 		getResp:   api.RetrieveRecordsResponse{Status: "SUCCESS", Records: []api.DNSRecord{}},
 		createErr: errors.New("creation failed"),
 	}
-	d := NewDaemon(dns, util, newConfig())
+	d := newDaemon(dns, util, newConfig())
 
-	err := d.syncRecord(ctx)
+	_, err := d.syncRecord(ctx)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create DNS record")
@@ -150,9 +155,9 @@ func TestSyncRecord_MultipleRecords(t *testing.T) {
 			},
 		},
 	}
-	d := NewDaemon(dns, util, newConfig())
+	d := newDaemon(dns, util, newConfig())
 
-	err := d.syncRecord(ctx)
+	_, err := d.syncRecord(ctx)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "expected 1 DNS record, got 2")
@@ -170,9 +175,9 @@ func TestSyncRecord_RecordUpToDate(t *testing.T) {
 			},
 		},
 	}
-	d := NewDaemon(dns, util, newConfig())
+	d := newDaemon(dns, util, newConfig())
 
-	err := d.syncRecord(ctx)
+	_, err := d.syncRecord(ctx)
 
 	assert.NoError(t, err)
 	assert.False(t, dns.updateCalled)
@@ -192,9 +197,9 @@ func TestSyncRecord_RecordOutdated_UpdateSuccess(t *testing.T) {
 		},
 	}
 	config := newConfig()
-	d := NewDaemon(dns, util, config)
+	d := newDaemon(dns, util, config)
 
-	err := d.syncRecord(ctx)
+	_, err := d.syncRecord(ctx)
 
 	assert.NoError(t, err)
 	assert.True(t, dns.updateCalled)
@@ -219,9 +224,9 @@ func TestSyncRecord_RecordOutdated_UpdateError(t *testing.T) {
 		},
 		updateErr: errors.New("update failed"),
 	}
-	d := NewDaemon(dns, util, newConfig())
+	d := newDaemon(dns, util, newConfig())
 
-	err := d.syncRecord(ctx)
+	_, err := d.syncRecord(ctx)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to update DNS record")
@@ -275,7 +280,7 @@ func TestDaemon_Close_StopsRun(t *testing.T) {
 		getResp: api.RetrieveRecordsResponse{Status: "SUCCESS", Records: []api.DNSRecord{{Content: "1.2.3.4"}}},
 	}
 	config := &Config{Interval: time.Hour} // long interval to avoid noise
-	d := NewDaemon(dns, util, config)
+	d := newDaemon(dns, util, config)
 
 	done := make(chan struct{})
 	go func() {
@@ -303,7 +308,7 @@ func TestDaemon_Run_EventLoop(t *testing.T) {
 	}
 	interval := 50 * time.Millisecond
 	config := &Config{Interval: interval}
-	d := NewDaemon(dns, util, config)
+	d := newDaemon(dns, util, config)
 
 	go d.Run(ctx)
 
@@ -324,7 +329,7 @@ func TestDaemon_ContextCancel_StopsRun(t *testing.T) {
 		getResp: api.RetrieveRecordsResponse{Status: "SUCCESS", Records: []api.DNSRecord{{Content: "1.2.3.4"}}},
 	}
 	config := &Config{Interval: time.Hour}
-	d := NewDaemon(dns, util, config)
+	d := newDaemon(dns, util, config)
 
 	done := make(chan struct{})
 	go func() {

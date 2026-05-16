@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -45,6 +46,19 @@ var rootCmd = &cobra.Command{
 	Use:   "porkbun-ddnsd",
 	Short: "Dynamic DNS daemon for Porkbun",
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		// init logger & log level
+		isDebug, err := cmd.Flags().GetBool("debug")
+		if err != nil {
+			return err
+		}
+		logLevel := slog.LevelInfo
+		if isDebug {
+			logLevel = slog.LevelDebug
+		}
+		var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
+
+		logger.Info("starting porkbun-ddnsd")
+
 		// get config path
 		path, err := cmd.Flags().GetString("config")
 		if err != nil {
@@ -60,7 +74,7 @@ var rootCmd = &cobra.Command{
 		}
 		cmd.SilenceUsage = true
 
-		fmt.Printf("[%s] loading daemon config from %s\n", time.Now().Format(time.RFC3339), path)
+		logger.Info("loading daemon config", "path", path)
 		// parse config file
 		settings := koanf.New(".")
 		err = settings.Load(file.Provider(path), toml.Parser())
@@ -82,6 +96,7 @@ var rootCmd = &cobra.Command{
 		if cfg.Interval <= 0 {
 			return fmt.Errorf("interval must be greater than 0")
 		}
+		logger.Info("daemon config loaded", "config", cfg)
 
 		var apiKey, secretKey string
 		// TODO: get credentials alternatively from systemd encrypted credentials, or from environment
@@ -98,6 +113,7 @@ var rootCmd = &cobra.Command{
 			client.Dns,
 			client.Util,
 			&cfg,
+			logger,
 		)
 
 		shutdownSignals := make(chan os.Signal, 1)
@@ -109,11 +125,12 @@ var rootCmd = &cobra.Command{
 
 		d.Run(context.Background())
 
-		fmt.Println("OK, bye!")
+		logger.Info("porkbun-ddnsd stopped")
 		return nil
 	},
 }
 
 func init() {
 	rootCmd.Flags().String("config", defaultConfigPath, "path to config file")
+	rootCmd.Flags().Bool("debug", false, "enable debug logging")
 }

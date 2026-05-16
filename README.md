@@ -178,8 +178,11 @@ porkbun-ddnds --config /etc/porkbun-ddnsd/config.toml
 
 You should see something like
 ```
-[2026-05-16T02:00:21+02:00] loading daemon config from /etc/porkbun-ddnsd/config.toml
-[2026-05-16T02:00:24+02:00] updated DNS record: mydomain.example.org A 12.34.56.78
+time=2026-05-16T19:30:53.588+02:00 level=INFO msg="starting porkbun-ddnsd"
+time=2026-05-16T19:30:53.588+02:00 level=INFO msg="loading daemon config" path=./config.toml
+time=2026-05-16T19:30:53.589+02:00 level=INFO msg="daemon config loaded" config="{Domain:example.com Subdomain:mymachine Interval:5m0s}"
+time=2026-05-16T19:30:53.590+02:00 level=INFO msg="running initial sync"
+time=2026-05-16T19:30:55.342+02:00 level=INFO msg="initial sync completed, IP address is already up to date" ip=12.34.56.78
 ```
 
 Here's an example configuration file. Make sure the config file has limited permissions to keep secrets safe.
