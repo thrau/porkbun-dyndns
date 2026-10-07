@@ -44,7 +44,7 @@ In your Porkbun domain settings:
 
 ### Download and install
 
-Download the latest release from the [releases page](https://github.com/porkbun/porkbun-dyndns/releases).
+Download the latest release from the [releases page](https://github.com/thrau/porkbun-dyndns/releases).
 
 #### Manual install:
 * Unpack the archive and place the `porkbun-dns` and/or `porkbun-ddnsd` binary into your path.
