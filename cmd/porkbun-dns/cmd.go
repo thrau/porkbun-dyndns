@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/thrau/porkbun-dyndns/internal/api"
+	"github.com/thrau/porkbun-dyndns/internal/credentials"
 	"github.com/thrau/porkbun-dyndns/internal/util"
 )
 
@@ -20,8 +21,11 @@ type App struct {
 }
 
 func init() {
-	app := &App{client: api.NewClient(api.WithEnvironmentCredentials())}
+	// credentials from the environment take precedence over the stored credentials file
+	creds, _, _ := credentials.Resolve()
+	app := &App{client: api.NewClient(api.WithCredentials(creds.ApiKey, creds.SecretKey))}
 
+	rootCmd.AddCommand(NewAuthCommand(app))
 	rootCmd.AddCommand(NewMyIpCommand(app))
 	rootCmd.AddCommand(NewListRecordsCommand(app))
 	rootCmd.AddCommand(NewGetRecordsCommand(app))
