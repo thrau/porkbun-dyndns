@@ -29,6 +29,8 @@ Add a note to make sure the record is updated correctly (see update-records help
 crontab -e
 ```
 
+Make sure the credentials are available to cron, either by running `porkbun-dns auth set` as the same user, or by setting `PORKBUN_API_KEY` and `PORKBUN_SECRET_KEY` in the crontab.
+
 Add:
 ```
 */15 * * * * porkbun-dns update-records --name dyndns.example.com --type A --content $(porkbun-dns myip) --notes "last updated at $(date)"
@@ -75,7 +77,54 @@ Download the latest release from the [releases page](https://github.com/thrau/po
 Porkbun DynDNS provides a CLI for basic DNS record management via the Porkbun API.
 You can use it to build your own custom scripts or cron jobs to update your DNS records as needed.
 
-Set your API key and secret key in your environment:
+#### Authentication
+
+The CLI looks for your API key and secret key in the following places, in this order:
+
+1. The environment variables `PORKBUN_API_KEY` and `PORKBUN_SECRET_KEY`.
+2. The credentials file, which you can manage with the `porkbun-dns auth` commands.
+
+Store your credentials interactively (you will be prompted for the API key and the secret key; the secret key is not echoed in a terminal):
+
+```sh
+porkbun-dns auth set
+```
+
+The credentials are saved **unencrypted** in `credentials.toml` in your OS user config directory, with file mode `0600`:
+
+| OS      | Path                                                    |
+|---------|---------------------------------------------------------|
+| Linux   | `~/.config/porkbun-dns/credentials.toml` (or `$XDG_CONFIG_HOME/porkbun-dns/credentials.toml`) |
+| macOS   | `~/Library/Application Support/porkbun-dns/credentials.toml` |
+| Windows | `%AppData%\porkbun-dns\credentials.toml`                |
+
+The file looks like this:
+
+```toml
+api_key = "pk1_..."
+secret_key = "sk1_..."
+```
+
+Check which credentials are in use and whether they are valid (this calls the authenticated Porkbun `/ping` endpoint; secret values are never printed):
+
+```sh
+porkbun-dns auth status
+```
+Might return:
+```
+Credentials file: /home/user/.config/porkbun-dns/credentials.toml (credentials set)
+Environment (PORKBUN_API_KEY, PORKBUN_SECRET_KEY): not set
+Active credentials source: file
+Ping: ok (your IP: 12.34.56.78)
+```
+
+Remove the stored credentials:
+
+```sh
+porkbun-dns auth delete
+```
+
+Alternatively, set your API key and secret key in your environment. These take precedence over the credentials file:
 
 ```sh
 export PORKBUN_API_KEY=pk1_...
@@ -86,6 +135,10 @@ You may see the following error if you don't have the API keys set correctly:
 ```
 Error: porkbun api error (400): status=ERROR code=API_KEY_REQUIRED message=All API requests require an API key or API token.
 ```
+
+Note that `porkbun-ddnsd` does not use the credentials file or environment variables yet; it reads the keys from its own config file (see [DynDNS Daemon](#dyndns-daemon)).
+
+#### Commands
 
 Show your IP address:
 
